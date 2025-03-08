@@ -93,7 +93,6 @@ def trouver_nombre_optimal_themes(embeddings):
         inerties.append(kmeans.inertia_)
         silhouette_avg = silhouette_score(embeddings, kmeans.labels_)
         silhouettes.append(silhouette_avg)
-        st.write(f"Nombre de clusters : {k}, Silhouette : {silhouette_avg}, Inertie : {kmeans.inertia_}")
 
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)
@@ -108,3 +107,56 @@ def trouver_nombre_optimal_themes(embeddings):
     plt.xlabel('Nombre de clusters')
     plt.ylabel('Silhouette')
     st.pyplot(plt)
+
+    meilleur_k = np.argmax(silhouettes) + 2
+    st.write(f"Nombre optimal de thèmes : {meilleur_k}")
+    return meilleur_k
+
+# Clustering avec KMeans
+def extraire_themes(embeddings, phrases, n_themes):
+    kmeans = KMeans(n_clusters=n_themes, random_state=42)
+    kmeans.fit(embeddings)
+
+    themes = {}
+    for i, label in enumerate(kmeans.labels_):
+        theme_key = f'Thème {label + 1}'
+        if theme_key not in themes:
+            themes[theme_key] = []
+        themes[theme_key].append(phrases[i])
+
+    return themes
+
+# Fonction principale
+def main():
+    st.title("Analyse de discours")
+
+    choix = st.radio("Choisissez comment fournir le discours :", ("Via un fichier PDF", "Via un lien web"))
+
+    if choix == "Via un fichier PDF":
+        uploaded_file = st.file_uploader("Veuillez importer votre fichier PDF :", type=["pdf"])
+        if uploaded_file is not None:
+            texte_brut = extraire_texte_pdf(uploaded_file)
+    else:
+        url = st.text_input("Entrez l'URL du discours :")
+        if url:
+            texte_brut = scraper_discours(url)
+        else:
+            texte_brut = None
+
+    if texte_brut:
+        st.write("Texte brut (scrapé ou extrait du PDF) :")
+        st.write(texte_brut)
+
+        texte_pretraite = pretraiter_texte(texte_brut)
+        embeddings, phrases = obtenir_embeddings(texte_pretraite)
+
+        if embeddings is not None and phrases is not None:
+            nombre_optimal_themes = trouver_nombre_optimal_themes(embeddings)
+            if nombre_optimal_themes:
+                themes = extraire_themes(embeddings, phrases, nombre_optimal_themes)
+                st.write("Thèmes identifiés :")
+                for theme, phrases in themes.items():
+                    st.write(f"{theme}: {', '.join(phrases[:3])}...")  # Affiche les 3 phrases pour chaque thème
+
+if __name__ == "__main__":
+    main()
