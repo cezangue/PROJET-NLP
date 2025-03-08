@@ -5,7 +5,7 @@ transformers==4.30.0
 torch==2.2.0
 sentence-transformers==2.2.2
 hdbscan==0.8.29
-wordcloud==1.8.0  # Ou une version antérieure compatible
+wordcloud==1.8.1  # ou 1.8.0
 rake-nltk==1.0.6
 beautifulsoup4==4.12.2
 nltk==3.8.1
