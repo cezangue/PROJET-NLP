@@ -5,9 +5,13 @@ import PyPDF2
 import re
 import nltk
 
-# Télécharger les ressources nécessaires de NLTK
-nltk.download('punkt')
-nltk.download('stopwords')
+# Vérifier si les ressources nécessaires de NLTK sont téléchargées
+try:
+    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('punkt')
+    nltk.download('stopwords')
 
 # Liste des mots à supprimer
 mots_a_supprimer = set(nltk.corpus.stopwords.words('french'))
