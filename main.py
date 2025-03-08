@@ -5,7 +5,6 @@ import nltk
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import matplotlib.pyplot as plt
-from wordcloud import WordCloud
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import PyPDF2
@@ -15,7 +14,6 @@ import streamlit as st
 # Télécharger les ressources nécessaires de NLTK
 nltk.download('punkt')
 nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger')
 
 # Liste des mots à supprimer
 mots_a_supprimer = set(nltk.corpus.stopwords.words('french') + [
@@ -110,79 +108,3 @@ def trouver_nombre_optimal_themes(embeddings):
     plt.xlabel('Nombre de clusters')
     plt.ylabel('Silhouette')
     st.pyplot(plt)
-
-    meilleur_k = np.argmax(silhouettes) + 2
-    st.write(f"Nombre optimal de thèmes : {meilleur_k}")
-    return meilleur_k
-
-# Clustering avec KMeans
-def extraire_themes(embeddings, phrases, n_themes):
-    kmeans = KMeans(n_clusters=n_themes, random_state=42)
-    kmeans.fit(embeddings)
-
-    themes = {}
-    for i, label in enumerate(kmeans.labels_):
-        theme_key = f'Thème {label + 1}'
-        if theme_key not in themes:
-            themes[theme_key] = []
-        themes[theme_key].append(phrases[i])
-
-    return themes
-
-# Extraction des mots clés avec TF-IDF
-def extraire_mots_cles_tfidf(phrases):
-    vectorizer = TfidfVectorizer(stop_words=list(mots_a_supprimer))
-    X = vectorizer.fit_transform(phrases)
-    mots_cles = vectorizer.get_feature_names_out()
-    scores = np.asarray(X.sum(axis=0)).flatten()
-    mots_cles_avec_scores = [(mot, score) for mot, score in zip(mots_cles, scores) if score > 0]
-    mots_cles_avec_scores.sort(key=lambda x: x[1], reverse=True)
-    return mots_cles_avec_scores[:10]
-
-# Extraction des mots clés avec RAKE
-def extraire_mots_cles_rake(texte):
-    r = Rake()
-    r.extract_keywords_from_text(texte)
-    return r.get_ranked_phrases()[:10]
-
-# Fonction pour résumer les phrases d'un thème
-def resumer_phrases(phrases):
-    summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device='cpu')
-    texte_a_resumer = ' '.join(phrases)
-    resum = summarizer(texte_a_resumer, max_length=50, min_length=25, do_sample=False)
-    return resum[0]['summary_text']
-
-# Fonction principale
-def main():
-    st.title("Analyse de discours")
-
-    choix = st.radio("Choisissez comment fournir le discours :", ("Via un fichier PDF", "Via un lien web"))
-
-    if choix == "Via un fichier PDF":
-        uploaded_file = st.file_uploader("Veuillez importer votre fichier PDF :", type=["pdf"])
-        if uploaded_file is not None:
-            texte_brut = extraire_texte_pdf(uploaded_file)
-    else:
-        url = st.text_input("Entrez l'URL du discours :")
-        if url:
-            texte_brut = scraper_discours(url)
-        else:
-            texte_brut = None
-
-    if texte_brut:
-        st.write("Texte brut (scrapé ou extrait du PDF) :")
-        st.write(texte_brut)
-
-        texte_pretraite = pretraiter_texte(texte_brut)
-        embeddings, phrases = obtenir_embeddings(texte_pretraite)
-
-        if embeddings is not None and phrases is not None:
-            nombre_optimal_themes = trouver_nombre_optimal_themes(embeddings)
-            if nombre_optimal_themes:
-                themes = extraire_themes(embeddings, phrases, nombre_optimal_themes)
-                st.write("Thèmes identifiés :")
-                for theme, phrases in themes.items():
-                    st.write(f"{theme}: {', '.join(phrases[:3])}...")  # Affiche les 3 phrases pour chaque thème
-
-if __name__ == "__main__":
-    main()
