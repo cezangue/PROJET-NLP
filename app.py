@@ -77,8 +77,27 @@ def main():
 
         # Prétraitement du texte
         texte_pretraite = pretraiter_texte(texte_brut)
-        st.write("Texte prétraité :")
-        st.write(texte_pretraite)
+        
+        # Menu latéral pour les options d'affichage
+        st.sidebar.header("Options d'affichage")
+        afficher_texte_pretraite = st.sidebar.checkbox("Afficher le texte prétraité")
+        afficher_themes = st.sidebar.checkbox("Afficher les thèmes importants")
+
+        if afficher_texte_pretraite:
+            st.write("Texte prétraité :")
+            st.write(texte_pretraite)
+
+        if afficher_themes:
+            # Exemple de fonction pour extraire les thèmes importants
+            themes_importants = extraire_themes_importants(texte_pretraite)
+            st.write("Thèmes importants :")
+            st.write(themes_importants)
+
+def extraire_themes_importants(texte):
+    # Simple exemple d'extraction de thèmes (vous pouvez remplacer par une logique plus complexe)
+    mots = texte.split()
+    themes = set(mots)  # Juste un exemple, remplacez par votre propre logique d'extraction
+    return themes
 
 if __name__ == "__main__":
     main()
