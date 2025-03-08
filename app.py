@@ -1,21 +1,17 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
+import PyPDF2
 import re
 import nltk
-from sentence_transformers import SentenceTransformer
-import numpy as np
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-import PyPDF2
-from rake_nltk import Rake
-from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Télécharger les ressources nécessaires de NLTK
-nltk.download('punkt')
-nltk.download('stopwords')
+# Vérifier si les ressources nécessaires de NLTK sont téléchargées
+try:
+    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('punkt')
+    nltk.download('stopwords')
 
 # Liste des mots à supprimer
 mots_a_supprimer = set(nltk.corpus.stopwords.words('french'))
@@ -57,55 +53,10 @@ def pretraiter_texte(texte):
     texte = re.sub(r'[^\w\s.]', '', texte)
     return texte
 
-# Génération des embeddings avec Sentence-BERT
-def obtenir_embeddings(texte):
-    model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-    phrases = nltk.sent_tokenize(texte, language='french')
-    embeddings = model.encode(phrases)
-    return embeddings, phrases
-
-# Déterminer le nombre optimal de clusters
-def trouver_nombre_optimal_themes(embeddings):
-    silhouettes = []
-    max_k = 10  # Limite pour le nombre de clusters
-
-    for k in range(2, max_k + 1):
-        kmeans = KMeans(n_clusters=k, random_state=42)
-        kmeans.fit(embeddings)
-        silhouette_avg = silhouette_score(embeddings, kmeans.labels_)
-        silhouettes.append(silhouette_avg)
-
-    meilleur_k = np.argmax(silhouettes) + 2
-    return meilleur_k
-
-# Clustering avec KMeans pour extraire les thèmes
-def extraire_themes(embeddings, phrases, n_themes):
-    kmeans = KMeans(n_clusters=n_themes, random_state=42)
-    kmeans.fit(embeddings)
-
-    themes = {}
-    for i, label in enumerate(kmeans.labels_):
-        theme_key = f'Thème {label + 1}'
-        if theme_key not in themes:
-            themes[theme_key] = []
-        themes[theme_key].append(phrases[i])
-
-    return themes
-
-# Extraction des mots-clés avec TF-IDF
-def extraire_mots_cles_tfidf(phrases):
-    vectorizer = TfidfVectorizer(stop_words=list(mots_a_supprimer))
-    X = vectorizer.fit_transform(phrases)
-    mots_cles = vectorizer.get_feature_names_out()
-    scores = np.asarray(X.sum(axis=0)).flatten()
-    mots_cles_avec_scores = [(mot, score) for mot, score in zip(mots_cles, scores) if score > 0]
-    mots_cles_avec_scores.sort(key=lambda x: x[1], reverse=True)
-    return mots_cles_avec_scores[:10]
-
 # Fonction principale
 def main():
     st.title("Analyse de discours")
-    texte_brut = None
+    texte_brut = None  # Initialisez ici pour éviter l'erreur
 
     choix = st.radio("Choisissez comment fournir le discours :", ("Via un fichier PDF", "Via un lien web"))
 
@@ -117,6 +68,8 @@ def main():
         url = st.text_input("Entrez l'URL du discours :")
         if url:
             texte_brut = scraper_discours(url)
+        else:
+            texte_brut = None
 
     if texte_brut:
         st.write("Texte brut (scrapé ou extrait du PDF) :")
@@ -124,29 +77,27 @@ def main():
 
         # Prétraitement du texte
         texte_pretraite = pretraiter_texte(texte_brut)
-        st.write("Texte prétraité :")
-        st.write(texte_pretraite)
+        
+        # Menu latéral pour les options d'affichage
+        st.sidebar.header("Options d'affichage")
+        afficher_texte_pretraite = st.sidebar.checkbox("Afficher le texte prétraité")
+        afficher_themes = st.sidebar.checkbox("Afficher les thèmes importants")
 
-        # Obtenir les embeddings
-        embeddings, phrases = obtenir_embeddings(texte_pretraite)
+        if afficher_texte_pretraite:
+            st.write("Texte prétraité :")
+            st.write(texte_pretraite)
 
-        # Déterminer le nombre optimal de thèmes
-        nombre_optimal_themes = trouver_nombre_optimal_themes(embeddings)
+        if afficher_themes:
+            # Exemple de fonction pour extraire les thèmes importants
+            themes_importants = extraire_themes_importants(texte_pretraite)
+            st.write("Thèmes importants :")
+            st.write(themes_importants)
 
-        # Extraction des thèmes par clustering
-        themes = extraire_themes(embeddings, phrases, nombre_optimal_themes)
-
-        # Afficher les thèmes extraits
-        st.sidebar.header("Thèmes identifiés")
-        for theme, phrases in themes.items():
-            st.sidebar.subheader(theme)
-            mots_cles_tfidf = extraire_mots_cles_tfidf(phrases)
-            st.sidebar.write(f"Mots clés (TF-IDF) : {[mot for mot, _ in mots_cles_tfidf]}")
-
-            # Génération d'un Word Cloud pour chaque thème
-            texte_theme = ' '.join(phrases)
-            wordcloud = WordCloud(width=400, height=200, background_color='white').generate(texte_theme)
-            st.sidebar.image(wordcloud.to_array(), caption=theme)
+def extraire_themes_importants(texte):
+    # Simple exemple d'extraction de thèmes (vous pouvez remplacer par une logique plus complexe)
+    mots = texte.split()
+    themes = set(mots)  # Juste un exemple, remplacez par votre propre logique d'extraction
+    return themes
 
 if __name__ == "__main__":
     main()
