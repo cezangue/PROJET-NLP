@@ -56,6 +56,7 @@ def pretraiter_texte(texte):
 # Fonction principale
 def main():
     st.title("Analyse de discours")
+    texte_brut = None  # Initialisez ici pour éviter l'erreur
 
     choix = st.radio("Choisissez comment fournir le discours :", ("Via un fichier PDF", "Via un lien web"))
 
