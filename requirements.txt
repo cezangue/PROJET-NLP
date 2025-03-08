@@ -1,9 +1,8 @@
 pip==25.0.1
-streamlit==1.30.0  # (ou la dernière version stable)
-
+streamlit==1.30.0
 PyPDF2==3.0.1
 transformers==4.30.0
-torch==2.0.1
+torch==2.2.0
 sentence-transformers==2.2.2
 hdbscan==0.8.29
 wordcloud==1.8.2.2
